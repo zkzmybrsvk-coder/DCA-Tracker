@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="color-scheme" content="dark">
+<title>Stack Tracker · HODL&amp;Retire</title>
+<style>
+:root{
+  --bg:#0a0806;--bg2:#100c08;--card:#15110c;--card2:#1b150e;
+  --line:#2b2218;--line2:#3a2d1f;
+  --ink:#f4e9d4;--ink2:#c9b896;--muted:#7a6a52;
+  --orange:#f7931a;--orange2:#ffb24d;
+  --green:#5fe88f;--red:#ff5a5a;--amber:#ffc857;--blue:#6ec5ff;
+  --mono:ui-monospace,Menlo,Monaco,Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:14px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+body{background-image:radial-gradient(circle at 50% -8%,rgba(247,147,26,.06),transparent 55%)}
+.app{max-width:560px;margin:0 auto;padding:14px 13px calc(60px + env(safe-area-inset-bottom));padding-top:calc(14px + env(safe-area-inset-top))}
+
+header{border:1px solid var(--line);background:var(--card);padding:13px 15px;margin-bottom:11px;display:flex;justify-content:space-between;align-items:center}
+.h-l{display:flex;align-items:center;gap:11px}
+.h-mark{color:var(--orange);font-size:21px;font-weight:800;line-height:1}
+.h-t{font-size:13px;font-weight:700;letter-spacing:.14em}
+.h-s{font-size:10px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase;margin-top:2px}
+.h-r{font-size:10px;color:var(--muted);letter-spacing:.1em;text-align:right;text-transform:uppercase}
+
+.card{border:1px solid var(--line);background:var(--card);margin-bottom:11px}
+.c-head{padding:10px 14px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);display:flex;justify-content:space-between;align-items:center}
+.c-head .ct{color:var(--muted);font-size:10px;letter-spacing:.1em}
+.c-body{padding:14px}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.stat{background:var(--card);padding:13px 14px}
+.stat .l{font-size:9.5px;color:var(--muted);letter-spacing:.13em;text-transform:uppercase;margin-bottom:5px}
+.stat .v{font-size:18px;font-weight:700;letter-spacing:-.01em;word-break:break-word}
+.stat .s{font-size:10px;color:var(--muted);margin-top:3px}
+.stat.wide{grid-column:1 / -1}
+.pos{color:var(--green)}.neg{color:var(--red)}.dim{color:var(--ink2)}
+
+.chart-wrap{padding:14px 8px 8px}
+canvas{display:block;width:100%;height:auto}
+.legend{display:flex;gap:16px;justify-content:center;padding:8px 0 2px;font-size:10px;color:var(--muted);letter-spacing:.05em;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:5px}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.g{background:var(--green)}.dot.r{background:var(--red)}
+.line-s{width:14px;height:0;border-top:2px dashed var(--orange)}
+.line-b{width:14px;height:0;border-top:1px dashed var(--blue)}
+
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.inp{position:relative}
+.inp .pre{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px}
+input,textarea{width:100%;background:var(--bg2);border:1px solid var(--line2);color:var(--ink);font-family:var(--mono);font-size:14px;padding:11px 12px;outline:none}
+input.pad{padding-left:24px}
+input:focus,textarea:focus{border-color:var(--orange)}
+textarea{resize:vertical;min-height:62px;font-size:11px;line-height:1.4}
+.hint{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.45}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.btn{width:100%;background:var(--orange);color:#1a0f02;border:none;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:12px;cursor:pointer;transition:opacity .15s}
+.btn:active{opacity:.7}
+.btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line2)}
+.btn.danger{background:transparent;color:var(--red);border:1px solid #4a2420}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.btn-row.one{grid-template-columns:1fr}
+
+.buys{max-height:none}
+.buy{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line)}
+.buy:last-child{border-bottom:none}
+.buy .bd{font-size:11px;color:var(--ink2)}
+.buy .bm{font-size:12px}
+.buy .bm b{color:var(--orange2);font-weight:700}
+.buy .br{text-align:right;font-size:11px;color:var(--muted)}
+.buy .x{color:var(--muted);font-size:15px;cursor:pointer;padding:2px 6px;justify-self:end}
+.buy .x:active{color:var(--red)}
+.empty{padding:26px 14px;text-align:center;color:var(--muted);font-size:11px;letter-spacing:.05em}
+
+.foot{display:flex;justify-content:space-between;padding:11px 14px;border-top:1px solid var(--line);font-size:10px;color:var(--muted);letter-spacing:.08em}
+.foot .fv{color:var(--ink2)}
+
+.toggle{display:inline-flex;border:1px solid var(--line2);overflow:hidden}
+.toggle button{background:transparent;border:none;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.1em;padding:7px 13px;cursor:pointer}
+.toggle button.on{background:var(--orange);color:#1a0f02;font-weight:700}
+
+.howto{border:1px solid var(--line);background:var(--card);padding:15px 16px;margin-bottom:11px}
+.howto h3{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);margin-bottom:9px}
+.howto p{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+.howto p:last-child{margin-bottom:0}
+.howto b{color:var(--ink2)}
+.caveat{border:1px solid #4a3a20;background:rgba(255,200,87,.05);padding:12px 14px;margin-bottom:11px;font-size:10.5px;color:var(--amber);line-height:1.55;letter-spacing:.02em}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);background:var(--orange);color:#1a0f02;font-size:11px;font-weight:700;letter-spacing:.06em;padding:11px 20px;opacity:0;transition:all .3s;z-index:50;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+footer{text-align:center;color:var(--muted);font-size:10px;letter-spacing:.2em;padding:8px 0 4px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="h-l">
+      <span class="h-mark">₿</span>
+      <div>
+        <div class="h-t">STACK&nbsp;TRACKER</div>
+        <div class="h-s">Log buys · cost basis</div>
+      </div>
+    </div>
+    <div class="h-r">HODL&amp;RETIRE<br>SUITE</div>
+  </header>
+
+  <!-- STATS -->
+  <div class="card">
+    <div class="c-head"><span>▸ Position</span><span class="ct" id="stat-ct">0 buys</span></div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card">
+    <div class="c-head"><span>▸ Buys vs Average Cost</span></div>
+    <div class="chart-wrap">
+      <canvas id="chart" width="700" height="420"></canvas>
+      <div class="legend">
+        <span><i class="dot g"></i>in profit</span>
+        <span><i class="dot r"></i>underwater</span>
+        <span><i class="line-s"></i>avg cost</span>
+        <span><i class="line-b"></i>spot</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD BUY -->
+  <div class="card">
+    <div class="c-head"><span>▸ Add A Buy</span></div>
+    <div class="c-body">
+      <div class="row2">
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="field">
+          <label>Price per BTC</label>
+          <div class="inp"><span class="pre">$</span><input class="pad" type="number" inputmode="decimal" id="f-price" placeholder="0" step="any"></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Amount&nbsp;&nbsp;·&nbsp;&nbsp;<span id="unit-label">SATS</span></label>
+        <input type="number" inputmode="decimal" id="f-amt" placeholder="0" step="any">
+        <div class="hint">1 BTC = 100,000,000 sats. Stored internally as sats.</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+        <div class="toggle" id="unit-toggle">
+          <button data-u="sats" class="on">SATS</button>
+          <button data-u="btc">BTC</button>
+        </div>
+        <span class="hint" style="margin:0" id="conv">—</span>
+      </div>
+      <button class="btn" id="add">+ Add Buy</button>
+    </div>
+  </div>
+
+  <!-- BUYS LIST -->
+  <div class="card">
+    <div class="c-head"><span>▸ Your Buys</span><span class="ct" id="list-ct">0 entries</span></div>
+    <div class="buys" id="list"></div>
+    <div class="foot">
+      <span>Spot price used for P/L</span>
+      <span class="fv" id="foot-spot">—</span>
+    </div>
+  </div>
+
+  <!-- SPOT + PERSISTENCE -->
+  <div class="card">
+    <div class="c-head"><span>▸ Spot Price &amp; Saving</span></div>
+    <div class="c-body">
+      <div class="field">
+        <label>Current BTC Price (manual)</label>
+        <div class="inp"><span class="pre">$</span><input class="pad" type="number" inputmode="decimal" id="spot" value="90000" step="1000"></div>
+        <div class="hint">Offline tool — no network. Enter today's spot to compute current value and P/L.</div>
+      </div>
+      <div class="field">
+        <label>Save / Restore Code</label>
+        <textarea id="bk" placeholder="Tap SAVE to generate a restore code here, then copy it into Notes. Paste a code here and tap RESTORE to load it back." spellcheck="false"></textarea>
+        <div class="hint">Your buys are also baked into the page's URL automatically — bookmark or save that link and reopening it restores everything, even inside Claude.</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost" id="do-save">Save ▸ Code</button>
+        <button class="btn ghost" id="do-restore">Restore ◂ Code</button>
+      </div>
+      <div class="btn-row one">
+        <button class="btn ghost" id="do-link">Copy Save-Link</button>
+      </div>
+      <div class="btn-row one">
+        <button class="btn danger" id="do-clear">Clear All Buys</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="caveat" id="caveat">
+    Not financial advice and not a forecast. Average cost is just arithmetic on what you paid — it says nothing about what comes next. A buy "above" or "below" any model line is not automatically right or wrong. This is a private record, nothing more.
+  </div>
+
+  <div class="howto">
+    <h3>▸ How To Use It</h3>
+    <p>Enter each purchase as you make it: the <b>date</b>, the <b>price per BTC</b> you paid, and the <b>amount</b> in sats or BTC. The tool keeps a running <b>average cost</b> — the single price your whole stack breaks even at.</p>
+    <p>On the chart, each buy is a dot at the price you paid; bigger buys are bigger dots. The orange dashed line is your average cost as it evolved with each purchase. Green dots are in profit at your entered spot; red are underwater. The blue dashed line marks spot.</p>
+    <p><b>Saving:</b> when you open this from your Home Screen or a normal Safari tab (the way it's meant to be used once it's on GitHub), every change <b>auto-saves to your device</b> — no action needed, it just persists. The page URL and the Save/Restore code are extra portable backups that survive clearing data or switching phones. <b>Inside Claude's preview</b> device-saving is blocked, so there use Copy Save-Link and reopen that link.</p>
+  </div>
+
+  <footer>◆ Stack Tracker · HODL&amp;Retire ◆</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+var SATS_PER_BTC = 1e8;
+var PRELOAD_CODE = 'STK1|110000|2024-01-15,43772.86,6610466;2024-02-15,45741.86,2904517;2024-03-15,66793.49,758517;2024-04-15,64089.65,420926;2024-05-15,63298.8,574687;2024-06-15,64426.65,403420;2024-07-15,60584.65,408998;2024-08-15,59283.6,424873;2024-09-15,60078.23,424380;2024-10-15,66815.5,565722;2024-11-15,90728.64,288674;2024-12-15,99245.86,311348;2025-01-15,99595.67,276508;2025-02-15,90991.61,486913;2025-03-15,84994.17,1148420;2025-04-15,86341.04,1411542;2025-05-15,104351.99,930035;2025-06-15,105338.26,2135378;2025-07-15,117014.85,2210557;2025-08-15,115094.8,2161036;2025-09-15,113333.87,685885;2025-10-15,115512.22,1386520;2025-11-15,95305.98,1386849;2025-12-15,89041.64,1398649;2026-01-15,90719.56,1775714;2026-02-15,68458.06,1575607;2026-03-15,70895.65,1572734;2026-04-15,75310.01,1316744';
+
+// ---- state ----
+var buys = [];      // {id, date, price, sats}
+var unit = "sats";
+
+// ---- helpers ----
+function $(id){return document.getElementById(id);}
+function fmt(n,d){d=d==null?0:d;return Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});}
+function money(n){if(!isFinite(n))return"—";var a=Math.abs(n);if(a>=1000)return"$"+fmt(Math.round(n));return"$"+fmt(n,2);}
+function toast(m){var t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove("show");},2200);}
+function todayISO(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+
+// ---- encode / decode (compact, URL-safe) ----
+// format: STK1|spot|date,price,sats;date,price,sats;...
+function encode(){
+  var rows = buys.map(function(b){
+    return [b.date, b.price, b.sats].join(",");
+  }).join(";");
+  return "STK1|" + ($("spot").value||"0") + "|" + rows;
+}
+function decode(str){
+  try{
+    str = (str||"").trim();
+    if(str.indexOf("STK1|")!==0) return null;
+    var parts = str.split("|");
+    var spot = parseFloat(parts[1]);
+    var rows = (parts[2]||"").split(";").filter(Boolean);
+    var out = [];
+    rows.forEach(function(r){
+      var c = r.split(",");
+      if(c.length>=3){
+        out.push({
+          id: Math.random().toString(36).slice(2),
+          date: c[0],
+          price: parseFloat(c[1]),
+          sats: parseFloat(c[2])
+        });
+      }
+    });
+    return {spot:spot, buys:out};
+  }catch(e){ return null; }
+}
+
+// ---- persistence ----
+// PRIMARY: localStorage — auto-saves with zero effort when run from
+//   GitHub Pages / Home Screen / any real browser tab.
+// FALLBACK: URL hash — works even inside Claude's viewer where storage
+//   is blocked, and powers the Copy Save-Link backup.
+var LS_KEY = "hr_stack_tracker_v1";
+
+function persist(){
+  var code = encode();
+  // 1. localStorage (silently skipped if blocked, e.g. inside Claude)
+  try{ localStorage.setItem(LS_KEY, code); }catch(e){}
+  // 2. URL hash (always — portable fallback / save-link)
+  try{
+    history.replaceState(null,"", location.pathname + "#d=" + encodeURIComponent(code));
+  }catch(e){}
+}
+
+function loadSaved(){
+  // Priority: explicit URL save-link > localStorage > empty.
+  // A shared link always wins so opening a save-link restores it.
+  try{
+    var h = location.hash || "";
+    var m = h.match(/[#&]d=([^&]+)/);
+    if(m){
+      var dec = decode(decodeURIComponent(m[1]));
+      if(dec && dec.buys && dec.buys.length){
+        buys = dec.buys;
+        if(isFinite(dec.spot) && dec.spot>0) $("spot").value = dec.spot;
+        return "link";
+      }
+    }
+  }catch(e){}
+  try{
+    var saved = localStorage.getItem(LS_KEY);
+    if(saved){
+      var d2 = decode(saved);
+      if(d2 && d2.buys && d2.buys.length){
+        buys = d2.buys;
+        if(isFinite(d2.spot) && d2.spot>0) $("spot").value = d2.spot;
+        return "storage";
+      }
+    }
+  }catch(e){}
+  // Pre-load historical buys (FY2024–FY2026 Jan-Apr known-qty totals)
+  // on first open when no save exists yet. Subsequent edits persist
+  // normally to localStorage / URL hash and override this preload.
+  try{
+    var pre = decode(PRELOAD_CODE);
+    if(pre && pre.buys && pre.buys.length){
+      buys = pre.buys;
+      if(isFinite(pre.spot) && pre.spot>0) $("spot").value = pre.spot;
+      return "preload";
+    }
+  }catch(e){}
+  return null;
+}
+
+// ---- compute ----
+function totalsAt(idx){
+  // cumulative through index idx inclusive
+  var sats=0, cost=0;
+  for(var i=0;i<=idx;i++){
+    sats += buys[i].sats;
+    cost += (buys[i].sats/SATS_PER_BTC) * buys[i].price;
+  }
+  var btc = sats/SATS_PER_BTC;
+  return {sats:sats, btc:btc, cost:cost, avg: btc>0? cost/btc : 0};
+}
+function grand(){
+  if(!buys.length) return {sats:0,btc:0,cost:0,avg:0};
+  return totalsAt(buys.length-1);
+}
+
+// ---- render ----
+function sortBuys(){
+  buys.sort(function(a,b){ return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+}
+
+function renderStats(){
+  var g = grand();
+  var spot = parseFloat($("spot").value)||0;
+  var val = g.btc * spot;
+  var pl = val - g.cost;
+  var plPct = g.cost>0 ? (pl/g.cost*100) : 0;
+  var cls = pl>=0 ? "pos" : "neg";
+
+  $("stats").innerHTML =
+    '<div class="stat"><div class="l">Total Stack</div><div class="v dim">'+fmt(Math.round(g.sats))+'</div><div class="s">sats · '+fmt(g.btc,8)+' BTC</div></div>'+
+    '<div class="stat"><div class="l">Total Invested</div><div class="v">'+money(g.cost)+'</div><div class="s">'+buys.length+' buy'+(buys.length===1?'':'s')+'</div></div>'+
+    '<div class="stat"><div class="l">Avg Cost / BTC</div><div class="v">'+money(g.avg)+'</div><div class="s">break-even</div></div>'+
+    '<div class="stat"><div class="l">Value @ Spot</div><div class="v">'+money(val)+'</div><div class="s">@ '+money(spot)+'</div></div>'+
+    '<div class="stat wide"><div class="l">Unrealized P/L</div><div class="v '+cls+'">'+(pl>=0?'+':'')+money(pl)+'  ·  '+(pl>=0?'+':'')+fmt(plPct,1)+'%</div></div>';
+
+  $("stat-ct").textContent = buys.length + (buys.length===1?" buy":" buys");
+  $("list-ct").textContent = buys.length + (buys.length===1?" entry":" entries");
+  $("foot-spot").textContent = money(spot);
+}
+
+function renderList(){
+  var el = $("list");
+  if(!buys.length){ el.innerHTML = '<div class="empty">No buys yet — add your first purchase above.</div>'; return; }
+  var html = "";
+  for(var i=buys.length-1;i>=0;i--){
+    var b = buys[i];
+    var btc = b.sats/SATS_PER_BTC;
+    var cost = btc * b.price;
+    html +=
+      '<div class="buy">'+
+        '<div class="bd">'+b.date+'</div>'+
+        '<div class="bm"><b>'+fmt(Math.round(b.sats))+'</b> sats<br><span style="color:var(--muted);font-size:10px">'+fmt(btc,8)+' BTC · '+money(cost)+'</span></div>'+
+        '<div style="display:flex;align-items:center;gap:8px"><div class="br">@ '+money(b.price)+'</div><span class="x" data-id="'+b.id+'">✕</span></div>'+
+      '</div>';
+  }
+  el.innerHTML = html;
+  Array.prototype.forEach.call(el.querySelectorAll(".x"), function(x){
+    x.addEventListener("click", function(){
+      var id = this.getAttribute("data-id");
+      buys = buys.filter(function(b){ return b.id !== id; });
+      refresh();
+      toast("Buy removed");
+    });
+  });
+}
+
+function drawChart(){
+  var cv = $("chart"), ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+  var padL=58, padR=16, padT=18, padB=34;
+  var plotW = W-padL-padR, plotH = H-padT-padB;
+
+  if(!buys.length){
+    ctx.fillStyle="#7a6a52"; ctx.font="13px ui-monospace,monospace"; ctx.textAlign="center";
+    ctx.fillText("Add buys to see the chart", W/2, H/2);
+    return;
+  }
+
+  var spot = parseFloat($("spot").value)||0;
+  // build avg-cost path
+  var pts = buys.map(function(b,i){
+    var t = totalsAt(i);
+    return { date:b.date, price:b.price, sats:b.sats, avg:t.avg };
+  });
+
+  var prices = pts.map(function(p){return p.price;}).concat([spot]);
+  pts.forEach(function(p){ prices.push(p.avg); });
+  var minP = Math.min.apply(null,prices), maxP = Math.max.apply(null,prices);
+  var span = maxP-minP || maxP || 1;
+  minP -= span*0.10; maxP += span*0.10;
+  if(minP<0) minP=0;
+
+  var n = pts.length;
+  function X(i){ return padL + (n===1 ? plotW/2 : (plotW * i/(n-1))); }
+  function Y(v){ return padT + plotH - ((v-minP)/(maxP-minP||1))*plotH; }
+
+  // grid + y labels
+  ctx.strokeStyle="#2b2218"; ctx.fillStyle="#7a6a52";
+  ctx.font="10px ui-monospace,monospace"; ctx.textAlign="right";
+  for(var g=0;g<=4;g++){
+    var v = minP + (maxP-minP)*g/4;
+    var y = Y(v);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+    ctx.fillText("$"+fmt(Math.round(v)), padL-7, y+3);
+  }
+
+  // spot line
+  if(spot>0){
+    var ys = Y(spot);
+    ctx.strokeStyle="#6ec5ff"; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(padL,ys); ctx.lineTo(W-padR,ys); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // avg cost path
+  ctx.strokeStyle="#f7931a"; ctx.setLineDash([5,4]); ctx.lineWidth=2;
+  ctx.beginPath();
+  pts.forEach(function(p,i){ var x=X(i),y=Y(p.avg); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // buy dots
+  var maxSats = Math.max.apply(null, pts.map(function(p){return p.sats;}));
+  pts.forEach(function(p,i){
+    var x=X(i), y=Y(p.price);
+    var r = 4 + 7*Math.sqrt((p.sats/maxSats)||0);
+    var profit = spot >= p.price;
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle = profit ? "rgba(95,232,143,.85)" : "rgba(255,90,90,.85)";
+    ctx.fill();
+    ctx.strokeStyle = profit ? "#5fe88f" : "#ff5a5a"; ctx.lineWidth=1.2; ctx.stroke();
+  });
+
+  // x labels (first / last)
+  ctx.fillStyle="#7a6a52"; ctx.font="9.5px ui-monospace,monospace";
+  ctx.textAlign="left";  ctx.fillText(pts[0].date, padL, H-12);
+  if(n>1){ ctx.textAlign="right"; ctx.fillText(pts[n-1].date, W-padR, H-12); }
+}
+
+function refresh(){
+  sortBuys();
+  renderStats();
+  renderList();
+  drawChart();
+  persist();
+}
+
+// ---- unit toggle ----
+function setUnit(u){
+  unit = u;
+  Array.prototype.forEach.call($("unit-toggle").children, function(b){
+    b.classList.toggle("on", b.getAttribute("data-u")===u);
+  });
+  $("unit-label").textContent = u.toUpperCase();
+  updateConv();
+}
+function updateConv(){
+  var v = parseFloat($("f-amt").value);
+  if(!isFinite(v)||v<=0){ $("conv").textContent="—"; return; }
+  if(unit==="sats") $("conv").textContent = fmt(v/SATS_PER_BTC,8)+" BTC";
+  else $("conv").textContent = fmt(Math.round(v*SATS_PER_BTC))+" sats";
+}
+
+// ---- events ----
+$("unit-toggle").addEventListener("click", function(e){
+  var b = e.target.closest("button"); if(!b) return;
+  setUnit(b.getAttribute("data-u"));
+});
+$("f-amt").addEventListener("input", updateConv);
+
+$("add").addEventListener("click", function(){
+  var date = $("f-date").value || todayISO();
+  var price = parseFloat($("f-price").value);
+  var amt = parseFloat($("f-amt").value);
+  if(!isFinite(price)||price<=0){ toast("Enter a valid price"); return; }
+  if(!isFinite(amt)||amt<=0){ toast("Enter a valid amount"); return; }
+  var sats = unit==="sats" ? amt : amt*SATS_PER_BTC;
+  buys.push({ id:Math.random().toString(36).slice(2), date:date, price:price, sats:sats });
+  $("f-price").value=""; $("f-amt").value=""; $("conv").textContent="—";
+  refresh();
+  toast("Buy added");
+});
+
+$("spot").addEventListener("input", function(){ renderStats(); drawChart(); persist(); });
+
+$("do-save").addEventListener("click", function(){
+  var code = encode();
+  $("bk").value = code;
+  if(navigator.clipboard) navigator.clipboard.writeText(code).catch(function(){});
+  toast("Code generated + copied");
+});
+$("do-restore").addEventListener("click", function(){
+  var dec = decode($("bk").value);
+  if(!dec){ toast("Code not recognized"); return; }
+  buys = dec.buys;
+  if(isFinite(dec.spot)&&dec.spot>0) $("spot").value = dec.spot;
+  refresh();
+  toast("Restored "+buys.length+" buys");
+});
+$("do-link").addEventListener("click", function(){
+  persist();
+  var link = location.href;
+  if(navigator.clipboard) navigator.clipboard.writeText(link).then(function(){ toast("Save-link copied"); },function(){ toast("Link in address bar"); });
+  else toast("Link is in the address bar");
+});
+$("do-clear").addEventListener("click", function(){
+  if(!buys.length){ toast("Nothing to clear"); return; }
+  if(confirm("Delete all "+buys.length+" buys? Make sure you saved a code or link first.")){
+    buys = [];
+    try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    refresh();
+    toast("All buys cleared");
+  }
+});
+
+// ---- init ----
+(function init(){
+  $("f-date").value = todayISO();
+  setUnit("sats");
+  var src = loadSaved();
+  refresh();
+  if(src==="storage") setTimeout(function(){ toast("Restored "+buys.length+" buys from this device"); }, 300);
+  else if(src==="link") setTimeout(function(){ toast("Restored "+buys.length+" buys from save-link"); }, 300);
+  else if(src==="preload") setTimeout(function(){ toast("Loaded "+buys.length+" historical monthly buys"); }, 300);
+})();
+</script>
+</body>
+</html>
